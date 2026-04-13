@@ -31,4 +31,8 @@ log_cli = true
 log_cli_level = "DEBUG"
 
 [project.optional-dependencies]
-dev = ["pytest>=7.2.0", "pytest-mock>=3.10.0"]
+dev = [
+    "pytest>=7.2.0",
+    "pytest-mock>=3.10.0",
+    "testcontainers[kafka,postgres]>=3.7.0",
+]
