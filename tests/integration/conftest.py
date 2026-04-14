@@ -3,6 +3,10 @@ from kafka.admin import KafkaAdminClient, NewTopic
 from testcontainers.kafka import KafkaContainer
 from testcontainers.postgres import PostgresContainer
 
+from stellar_harvest_ie_config.logging_config import setup_logging
+
+setup_logging()
+
 from stellar_harvest_ie_stream.settings import settings as stream_settings
 
 # ---------------------------------------------------------------------------
@@ -10,6 +14,7 @@ from stellar_harvest_ie_stream.settings import settings as stream_settings
 # Scoped to the session so they start once and are reused across all
 # integration tests in the run.
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def kafka_server():
@@ -25,13 +30,15 @@ def kafka_server():
         # must create the topic explicitly before any producer/consumer runs.
         admin = KafkaAdminClient(bootstrap_servers=[bootstrap])
         try:
-            admin.create_topics([
-                NewTopic(
-                    name=stream_settings.swpc_topic,
-                    num_partitions=1,
-                    replication_factor=1,
-                )
-            ])
+            admin.create_topics(
+                [
+                    NewTopic(
+                        name=stream_settings.swpc_topic,
+                        num_partitions=1,
+                        replication_factor=1,
+                    )
+                ]
+            )
         finally:
             admin.close()
 
