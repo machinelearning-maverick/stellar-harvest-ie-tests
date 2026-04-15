@@ -39,7 +39,7 @@ def _build_asyncpg_url(postgresql) -> str:
 
 
 @log_io()
-def test_it(kafka_bootstrap_server, postgres_url, monkeypatch):
+async def test_it(kafka_bootstrap_server, postgres_url, monkeypatch):
     topic = stream_settings.swpc_topic
     monkeypatch.setattr(stream_settings, "kafka_uri", kafka_bootstrap_server)
     monkeypatch.setattr(stream_clients, "_producer", None)
@@ -54,7 +54,7 @@ def test_it(kafka_bootstrap_server, postgres_url, monkeypatch):
         async with test_engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-    asyncio.run(_setup_schema())
+    await _setup_schema()
 
     publish_latest_planetary_kp_index()
 
@@ -87,7 +87,7 @@ def test_it(kafka_bootstrap_server, postgres_url, monkeypatch):
             service = KpIndexConsumerService(session)
             return await service.create(single_raw_message)
 
-    entity = asyncio.run(_store())
+    entity = await _store()
 
     assert entity.id is not None, "Entity must have a database-assigned id"
 
@@ -96,6 +96,6 @@ def test_it(kafka_bootstrap_server, postgres_url, monkeypatch):
             result = await session.execute(select(KpIndexEntity))
             return result.scalars().all()
 
-    rows = asyncio.run(_query())
+    rows = await _query()
 
     assert len(rows) == 1, f"Expected exactly 1 row in kp_index table, got {len(rows)}"
