@@ -1,7 +1,7 @@
 import json
-import pytest
 import logging
-import asyncio
+
+from unittest.mock import patch
 
 from stellar_harvest_ie_config.utils.log_decorators import log_io
 
@@ -25,6 +25,13 @@ from stellar_harvest_ie_consumers.stellar.swpc.service.kp_index_service import (
 )
 
 logger = logging.getLogger(__name__)
+
+FIXED_KP_INDEX_PAYLOAD = {
+    "time_tag": "2026-01-01T12:00:00",
+    "kp_index": 3,
+    "estimated_kp": 2.67,
+    "kp": "3M",
+}
 
 
 @log_io()
@@ -99,3 +106,67 @@ async def test_it(kafka_bootstrap_server, postgres_url, monkeypatch):
     rows = await _query()
 
     assert len(rows) == 1, f"Expected exactly 1 row in kp_index table, got {len(rows)}"
+
+
+@log_io()
+async def test_it_with_fixed_payload(kafka_bootstrap_server, postgres_url):
+    topic = stream_settings.swpc_topic
+
+    test_engine = create_async_engine(postgres_url, echo=True)
+    TestAsyncSessionLocal = sessionmaker(
+        test_engine, class_=AsyncSession, expire_on_commit=False
+    )
+
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    with patch(
+        "stellar_harvest_ie_producers.stellar.swpc.producer"
+        ".fetch_latest_planetary_kp_index",
+        return_value=FIXED_KP_INDEX_PAYLOAD,
+    ):
+        publish_latest_planetary_kp_index()
+
+    consumer = KafkaConsumer(
+        topic,
+        bootstrap_servers=[kafka_bootstrap_server],
+        group_id=f"test-fixed-{topic}-consumer",
+        auto_offset_reset="earliest",
+        value_deserializer=lambda v: json.loads(v.decode("utf-8")),
+    )
+
+    received: list[dict] = []
+    try:
+        for msg in consumer:
+            received.append(msg.value)
+            break
+    finally:
+        consumer.close()
+
+    assert received, f"No messages received on topic '{topic}'"
+
+    single_raw_message = received[0]
+
+    # assert Kafka message matches fixed payload
+    assert single_raw_message["time_tag"] == FIXED_KP_INDEX_PAYLOAD["time_tag"]
+    assert single_raw_message["kp_index"] == FIXED_KP_INDEX_PAYLOAD["kp_index"]
+    assert single_raw_message["estimated_kp"] == FIXED_KP_INDEX_PAYLOAD["estimated_kp"]
+    assert single_raw_message["kp"] == FIXED_KP_INDEX_PAYLOAD["kp"]
+
+    # assert DB write
+    async with TestAsyncSessionLocal() as session:
+        service = KpIndexConsumerService(session)
+        entity = await service.create(single_raw_message)
+
+    assert entity.id is not None
+    assert entity.kp_index == FIXED_KP_INDEX_PAYLOAD["kp_index"]
+    assert entity.estimated_kp == FIXED_KP_INDEX_PAYLOAD["estimated_kp"]
+    assert entity.kp == FIXED_KP_INDEX_PAYLOAD["kp"]
+
+    # assert exactly 1 row in DB
+    async with TestAsyncSessionLocal() as session:
+        result = await session.execute(select(KpIndexEntity))
+        rows = result.scalars().all()
+
+    assert len(rows) == 1
+    assert str(rows[0].time_tag) == "2026-01-01 12:00:00"
