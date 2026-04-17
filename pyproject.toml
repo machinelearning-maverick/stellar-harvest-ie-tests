@@ -12,12 +12,12 @@ authors = [
     { name = "Machine Learning Maverick", email = "github@machinelearningmaverick.com" },
 ]
 dependencies = [
-    "stellar-harvest-ie-config",
-    "stellar-harvest-ie-models",
-    "stellar-harvest-ie-stream",
-    "stellar-harvest-ie-store",
-    "stellar-harvest-ie-producers",
-    "stellar-harvest-ie-consumers",
+    "stellar-harvest-ie-config>=0.1.2",
+    "stellar-harvest-ie-models>=0.3.1",
+    "stellar-harvest-ie-stream>=0.1.2",
+    "stellar-harvest-ie-store>=0.1.2",
+    "stellar-harvest-ie-producers>=0.2.3",
+    "stellar-harvest-ie-consumers>=0.2.1",
 ]
 
 [tool.setuptools.packages.find]
