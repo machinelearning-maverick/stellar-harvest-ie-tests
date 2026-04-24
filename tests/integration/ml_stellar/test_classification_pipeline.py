@@ -1,9 +1,11 @@
+from pytest import raises
 from datetime import datetime
 
 import pandas as pd
 
 from stellar_harvest_ie_models.stellar.swpc.entities import KpIndexEntity
 from stellar_harvest_ie_ml_stellar.data.loader import load_planetary_kp_index
+from stellar_harvest_ie_ml_stellar.models.classification.validate import validate
 
 
 _KP_ROWS = [
@@ -26,6 +28,30 @@ _KP_ROWS = [
         kp="0Z",
     ),
 ]
+
+
+async def test_validate(ml_db_session_factory):
+    async with ml_db_session_factory() as session:
+        for row in _KP_ROWS:
+            session.add(row)
+        await session.commit()
+    
+    df = await load_planetary_kp_index()
+    assert isinstance(df, pd.DataFrame)
+
+    validate(df=df)
+
+async def test_validate_missing_columns(ml_db_session_factory):
+    async with ml_db_session_factory() as session:
+        for row in _KP_ROWS:
+            session.add(row)
+        await session.commit()
+    
+    df = await load_planetary_kp_index()
+    df = df.drop(columns=["kp_index"])
+
+    with raises(ValueError, match="missing required columns"):
+        validate(df=df)
 
 
 async def test_load_planetary_kp_index(patch_loader, ml_db_session_factory):
