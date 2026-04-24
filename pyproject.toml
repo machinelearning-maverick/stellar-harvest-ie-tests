@@ -18,6 +18,7 @@ dependencies = [
     "stellar-harvest-ie-store>=0.1.2",
     "stellar-harvest-ie-producers>=0.2.3",
     "stellar-harvest-ie-consumers>=0.2.1",
+    "stellar-harvest-ie-ml-stellar>=0.1.1",
 ]
 
 [tool.setuptools.packages.find]
