@@ -4,8 +4,13 @@ from datetime import datetime
 import pandas as pd
 
 from stellar_harvest_ie_models.stellar.swpc.entities import KpIndexEntity
-from stellar_harvest_ie_ml_stellar.data.loader import load_planetary_kp_index
+from stellar_harvest_ie_ml_stellar.data.loader import (
+    load_planetary_kp_index,
+    kp_entities_to_df,
+)
 from stellar_harvest_ie_ml_stellar.models.classification.validate import validate
+from stellar_harvest_ie_ml_stellar.models.classification.features import extract
+from stellar_harvest_ie_ml_stellar.models.classification.config.core import config
 
 
 _KP_ROWS = [
@@ -30,23 +35,38 @@ _KP_ROWS = [
 ]
 
 
+def test_extract():
+    df = kp_entities_to_df(_KP_ROWS)
+
+    X, y = extract(df=df)
+
+    assert isinstance(X, pd.DataFrame)
+    assert isinstance(y, pd.Series)
+    assert len(X) == len(df)
+    assert list(X.columns) == config.model_cfg.features_raw
+    assert y.name == config.model_cfg.target
+    assert "time_tag" not in X.columns
+    assert y.tolist() == [0, 1, 2]  # kp_index 2->0, 4->1, 7->2
+
+
 async def test_validate(ml_db_session_factory):
     async with ml_db_session_factory() as session:
         for row in _KP_ROWS:
             session.add(row)
         await session.commit()
-    
+
     df = await load_planetary_kp_index()
     assert isinstance(df, pd.DataFrame)
 
     validate(df=df)
+
 
 async def test_validate_missing_columns(ml_db_session_factory):
     async with ml_db_session_factory() as session:
         for row in _KP_ROWS:
             session.add(row)
         await session.commit()
-    
+
     df = await load_planetary_kp_index()
     df = df.drop(columns=["kp_index"])
 
