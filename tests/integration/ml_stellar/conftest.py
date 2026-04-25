@@ -21,7 +21,7 @@ def ml_db_session_factory(postgres_url):
     return sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def patch_loader(ml_db_session_factory, monkeypatch):
     monkeypatch.setattr(
         "stellar_harvest_ie_ml_stellar.data.loader.AsyncSessionLocal",

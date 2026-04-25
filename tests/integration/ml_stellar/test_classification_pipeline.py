@@ -54,7 +54,7 @@ async def test_validate_missing_columns(ml_db_session_factory):
         validate(df=df)
 
 
-async def test_load_planetary_kp_index(patch_loader, ml_db_session_factory):
+async def test_load_planetary_kp_index(ml_db_session_factory):
     async with ml_db_session_factory() as session:
         for row in _KP_ROWS:
             session.add(row)
