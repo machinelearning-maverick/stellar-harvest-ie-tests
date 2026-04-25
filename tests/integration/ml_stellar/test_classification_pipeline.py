@@ -10,6 +10,7 @@ from stellar_harvest_ie_ml_stellar.data.loader import (
 )
 from stellar_harvest_ie_ml_stellar.models.classification.validate import validate
 from stellar_harvest_ie_ml_stellar.models.classification.features import extract
+from stellar_harvest_ie_ml_stellar.models.classification.train import train
 from stellar_harvest_ie_ml_stellar.models.classification.config.core import config
 
 
@@ -33,6 +34,29 @@ _KP_ROWS = [
         kp="0Z",
     ),
 ]
+
+
+_KP_ROWS_LARGE = [
+    KpIndexEntity(
+        time_tag=datetime(2024, 1, 1, (i * 3) % 24, 0),
+        kp_index=[1, 4, 7][i % 3],
+        estimated_kp=float([1, 4, 7][i % 3]),
+        kp=["1Z", "4P", "7M"][i % 3],
+    )
+    for i in range(20)
+]
+
+
+def test_train_split():
+    df = kp_entities_to_df(_KP_ROWS_LARGE)
+    X, y = extract(df=df)
+
+    _, _, _, y_train, y_test = train(X=X, y=y)
+
+    assert len(y_train) + len(y_test) == len(y)
+    # shuffle=False: train gets first n rows, test gets last m rows
+    assert y_train.tolist() == y.iloc[: len(y_train)].tolist()
+    assert y_test.tolist() == y.iloc[len(y_train) :].tolist()
 
 
 def test_extract():
