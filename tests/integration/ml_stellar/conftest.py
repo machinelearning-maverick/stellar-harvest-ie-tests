@@ -1,6 +1,7 @@
 import asyncio
 
 import pytest
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
@@ -22,6 +23,13 @@ def ml_db_session_factory(postgres_url):
 
 
 @pytest.fixture(autouse=True)
+async def truncate_kp_index(ml_db_session_factory):
+    async with ml_db_session_factory() as session:
+        await session.execute(text("TRUNCATE TABLE kp_index RESTART IDENTITY"))
+        await session.commit()
+
+
+@pytest.fixture
 def patch_loader(ml_db_session_factory, monkeypatch):
     monkeypatch.setattr(
         "stellar_harvest_ie_ml_stellar.data.loader.AsyncSessionLocal",

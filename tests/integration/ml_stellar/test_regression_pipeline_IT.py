@@ -1,6 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
-import numpy as np
 import pandas as pd
 
 from stellar_harvest_ie_models.stellar.swpc.entities import KpIndexEntity
@@ -33,20 +32,21 @@ _KP_ROWS = [
 ]
 
 
-_KP_ROWS_LARGE = [
+# 250 rows at the native 3h cadence — enough to survive max_lag=216 + horizon=1
+_KP_ROWS_REGRESSION = [
     KpIndexEntity(
-        time_tag=datetime(2024, 1, 1, (i * 3) % 24, 0),
+        time_tag=datetime(2024, 1, 1, 0, 0) + timedelta(hours=3 * i),
         kp_index=[1, 4, 7][i % 3],
-        estimated_kp=float([1, 4, 7][i % 3]),
+        estimated_kp=float([1.0, 4.0, 7.0][i % 3]),
         kp=["1Z", "4P", "7M"][i % 3],
     )
-    for i in range(20)
+    for i in range(250)
 ]
 
 
 async def test_load_planetary_kp_index(ml_db_session_factory):
     async with ml_db_session_factory() as session:
-        for row in _KP_ROWS:
+        for row in _KP_ROWS_REGRESSION:
             session.add(row)
         await session.commit()
 
@@ -54,27 +54,23 @@ async def test_load_planetary_kp_index(ml_db_session_factory):
 
     assert isinstance(df, pd.DataFrame)
     assert list(df.columns) == ["id", "time_tag", "kp_index", "estimated_kp", "kp"]
-    assert len(df) == len(_KP_ROWS)
+    assert len(df) == len(_KP_ROWS_REGRESSION)
     assert df["kp_index"].tolist() == [2, 4, 7]
     assert df["kp"].tolist() == ["2Z", "1P", "0Z"]
 
 
 async def test_run_regression_pipeline(ml_db_session_factory):
     async with ml_db_session_factory() as session:
-        for row in _KP_ROWS_LARGE:
+        for row in _KP_ROWS_REGRESSION:
             session.add(row)
         await session.commit()
 
     result = await run_regression_pipeline()
 
     assert isinstance(result, dict)
-    assert set(result.keys()) == {
-        "accuracy",
-        "f1_macro",
-        "class_report",
-        "confusion_matrix",
-    }
-    assert 0.0 <= result["accuracy"] <= 1.0
-    assert 0.0 <= result["f1_macro"] <= 1.0
-    assert isinstance(result["class_report"], dict)
-    assert isinstance(result["confusion_matrix"], np.ndarray)
+    assert set(result.keys()) == {"mae", "rmse", "r2", "mae_baseline", "rmse_baseline"}
+    assert result["mae"] >= 0.0
+    assert result["rmse"] >= 0.0
+    assert result["mae_baseline"] >= 0.0
+    assert result["rmse_baseline"] >= 0.0
+    assert isinstance(result["r2"], float)
