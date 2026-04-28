@@ -5,10 +5,10 @@ import pandas as pd
 
 from stellar_harvest_ie_models.stellar.swpc.entities import KpIndexEntity
 from stellar_harvest_ie_ml_stellar.data.loader import load_planetary_kp_index
-from stellar_harvest_ie_ml_stellar.pipelines.classification_pipeline import (
-    run_classification_pipeline,
+from stellar_harvest_ie_ml_stellar.pipelines.regression_pipeline import (
+    run_regression_pipeline,
 )
-from stellar_harvest_ie_ml_stellar.models.classification.config.core import config
+from stellar_harvest_ie_ml_stellar.models.regression.config.core import config
 
 
 _KP_ROWS = [
@@ -59,13 +59,13 @@ async def test_load_planetary_kp_index(ml_db_session_factory):
     assert df["kp"].tolist() == ["2Z", "1P", "0Z"]
 
 
-async def test_run_classification_pipeline(ml_db_session_factory):
+async def test_run_regression_pipeline(ml_db_session_factory):
     async with ml_db_session_factory() as session:
         for row in _KP_ROWS_LARGE:
             session.add(row)
         await session.commit()
 
-    result = await run_classification_pipeline()
+    result = await run_regression_pipeline()
 
     assert isinstance(result, dict)
     assert set(result.keys()) == {
