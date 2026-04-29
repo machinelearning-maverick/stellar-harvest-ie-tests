@@ -29,7 +29,7 @@ async def truncate_kp_index(ml_db_session_factory):
         await session.commit()
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def patch_loader(ml_db_session_factory, monkeypatch):
     monkeypatch.setattr(
         "stellar_harvest_ie_ml_stellar.data.loader.AsyncSessionLocal",

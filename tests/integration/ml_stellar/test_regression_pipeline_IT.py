@@ -46,7 +46,7 @@ _KP_ROWS_REGRESSION = [
 
 async def test_load_planetary_kp_index(ml_db_session_factory):
     async with ml_db_session_factory() as session:
-        for row in _KP_ROWS_REGRESSION:
+        for row in _KP_ROWS:
             session.add(row)
         await session.commit()
 
@@ -54,7 +54,7 @@ async def test_load_planetary_kp_index(ml_db_session_factory):
 
     assert isinstance(df, pd.DataFrame)
     assert list(df.columns) == ["id", "time_tag", "kp_index", "estimated_kp", "kp"]
-    assert len(df) == len(_KP_ROWS_REGRESSION)
+    assert len(df) == len(_KP_ROWS)
     assert df["kp_index"].tolist() == [2, 4, 7]
     assert df["kp"].tolist() == ["2Z", "1P", "0Z"]
 
