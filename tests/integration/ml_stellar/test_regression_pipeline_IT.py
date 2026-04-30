@@ -7,7 +7,6 @@ from stellar_harvest_ie_ml_stellar.data.loader import load_planetary_kp_index
 from stellar_harvest_ie_ml_stellar.pipelines.regression_pipeline import (
     run_regression_pipeline,
 )
-from stellar_harvest_ie_ml_stellar.models.regression.config.core import config
 
 
 _KP_ROWS = [
@@ -68,9 +67,15 @@ async def test_run_regression_pipeline(ml_db_session_factory):
     result = await run_regression_pipeline()
 
     assert isinstance(result, dict)
-    assert set(result.keys()) == {"mae", "rmse", "r2", "mae_baseline", "rmse_baseline"}
-    assert result["mae"] >= 0.0
-    assert result["rmse"] >= 0.0
-    assert result["mae_baseline"] >= 0.0
-    assert result["rmse_baseline"] >= 0.0
-    assert isinstance(result["r2"], float)
+    assert set(result.keys()) == {"metrics", "forecast"}
+
+    metrics = result["metrics"]
+    assert set(metrics.keys()) == {"mae", "rmse", "r2", "mae_baseline", "rmse_baseline"}
+    assert metrics["mae"] >= 0.0
+    assert metrics["rmse"] >= 0.0
+    assert metrics["mae_baseline"] >= 0.0
+    assert metrics["rmse_baseline"] >= 0.0
+    assert isinstance(metrics["r2"], float)
+
+    assert isinstance(result["forecast"], list)
+    assert len(result["forecast"]) == 8  # default n_forecast_steps

@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
 from stellar_harvest_ie_models.base import Base
-import stellar_harvest_ie_models.stellar.swpc.entities  # noqa: F401 — registers KpIndexEntity with Base
+import stellar_harvest_ie_models.stellar.swpc.entities  # noqa: F401 — registers all entities with Base
 
 
 @pytest.fixture(scope="session")
@@ -23,9 +23,10 @@ def ml_db_session_factory(postgres_url):
 
 
 @pytest.fixture(autouse=True)
-async def truncate_kp_index(ml_db_session_factory):
+async def truncate_tables(ml_db_session_factory):
     async with ml_db_session_factory() as session:
         await session.execute(text("TRUNCATE TABLE kp_index RESTART IDENTITY"))
+        await session.execute(text("TRUNCATE TABLE kp_forecast RESTART IDENTITY"))
         await session.commit()
 
 
@@ -33,5 +34,9 @@ async def truncate_kp_index(ml_db_session_factory):
 def patch_loader(ml_db_session_factory, monkeypatch):
     monkeypatch.setattr(
         "stellar_harvest_ie_ml_stellar.data.loader.AsyncSessionLocal",
+        ml_db_session_factory,
+    )
+    monkeypatch.setattr(
+        "stellar_harvest_ie_ml_stellar.pipelines.regression_pipeline.AsyncSessionLocal",
         ml_db_session_factory,
     )
